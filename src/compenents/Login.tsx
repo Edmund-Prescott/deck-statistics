@@ -1,11 +1,11 @@
 import { FormEvent, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
   const emailRef = useRef<HTMLInputElement>(null!);
   const passwordRef = useRef<HTMLInputElement>(null!);
+  const { login } = useAuth();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -16,11 +16,7 @@ export default function Login() {
     try {
       setError("");
       setLoading(true);
-      await signInWithEmailAndPassword(
-        auth,
-        emailRef.current.value,
-        passwordRef.current.value
-      );
+      await login(emailRef.current.value, passwordRef.current.value);
       navigate("/dashboard");
     } catch (error: any) {
       if (error.code === "auth/user-not-found") {

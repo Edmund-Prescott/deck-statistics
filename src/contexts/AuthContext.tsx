@@ -12,7 +12,7 @@ import {
   signOut,
   sendPasswordResetEmail,
 } from "firebase/auth";
-import { getAuth } from "firebase/auth";
+import { authPromise } from "../firebase";
 
 interface AuthContextProps {
   currentUser: any;
@@ -39,12 +39,24 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [auth, setAuth] = useState<Auth | null>(null);
 
-  const auth: Auth = getAuth();
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const authInstance = await authPromise;
+        setAuth(authInstance);
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      }
+    };
+
+    initializeAuth();
+  }, []);
 
   const signup = async (email: string, password: string) => {
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth!, email, password);
     } catch (error) {
       throw error;
     }
@@ -52,7 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth!, email, password);
     } catch (error) {
       throw error;
     }
@@ -60,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      await signOut(auth);
+      await signOut(auth!);
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -68,20 +80,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resetPassword = async (email: string) => {
     try {
-      await sendPasswordResetEmail(auth, email);
-      await signOut(auth);
+      await sendPasswordResetEmail(auth!, email);
+      await signOut(auth!);
     } catch (error) {
       console.error("Password reset error:", error);
     }
   };
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
+    if (auth) {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        setCurrentUser(user);
+        setLoading(false);
+      });
 
-    return unsubscribe;
+      return () => unsubscribe();
+    }
   }, [auth]);
 
   const value: AuthContextProps = {
